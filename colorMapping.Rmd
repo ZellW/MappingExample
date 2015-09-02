@@ -1,0 +1,49 @@
+#Color Mapping
+
+
+This document will show how to create a choropleth map with pop-ups using RStudio’s Leaflet package for R. The map will display GDP per capita in thousands of pesos for Mexican states in 2008. Spatial data were originally downloaded from Natural Earth, and the demographic data come from INEGI, indicador 3116001002. The data are in the form of a zipped shapefile that can be read in to R with the rgdal package.
+
+To get started, let’s load the required packages, download the data, and take a look at it.
+
+```{r}
+library(rgdal)
+library(leaflet)
+library(RColorBrewer)
+
+tmp <- tempdir()
+
+url <- "http://personal.tcu.edu/kylewalker/data/mexico.zip"
+
+file <- basename(url)
+
+download.file(url, file)
+
+unzip(file, exdir = tmp)
+
+mexico <- readOGR(dsn = tmp, layer = "mexico", encoding = "UTF-8")
+
+head(mexico@data)
+```
+The dataset contains a number of different variables; if you are curious, mus09 is the out-migration rate to the United States per 1000 residents for the period 2004-2009 (Indicador 3104004001), and pri10, sec10, ter10, and other10 (Indicadores 3103004001, 3103004002, 3103004003) reflect the distribution of the state’s workforce across its primary, secondary, tertiary, and other sectors, respectively. The variable we are interested in mapping is gdp08, which is per capita gross domestic product in thousands of pesos for 2008 (in 2003 pesos).
+
+With the Leaflet package, creating a functional interactive map takes just a few lines of R code. Notice that I first define a ColorBrewer color ramp and means of classifying my data using the built-in colorQuantile function. I then define the parameters of my html pop-up. I then call the leaflet function, pull in tiles from CartoDB, and then style the polygons within the addPolygons function.
+
+```{r}
+pal <- colorQuantile("YlGn", NULL, n = 5)
+
+state_popup <- paste0("<strong>Estado: </strong>", 
+                      mexico$name, 
+                      "<br><strong>PIB per c?pita, miles de pesos, 2008: </strong>", 
+                      mexico$gdp08)
+
+leaflet(data = mexico) %>%
+     addProviderTiles("CartoDB.Positron") %>%
+     addPolygons(fillColor = ~pal(gdp08), 
+                 fillOpacity = 0.8, 
+                 color = "#BDBDC3", 
+                 weight = 1, 
+                 popup = state_popup)
+
+```
+
+WOW, it works!
